@@ -58,9 +58,37 @@ class Motor
 	public:
 		Motor();
 		void Rotate(bool direction);
+		void Stop();
 	private:
 		uint16_t port_map; // port name
 		bool direction; // value of port
+};
+
+class Button
+{
+	public:
+		Button(uint16_t port);
+		bool GetButtonState();
+	private:
+		uint16_t port_map; // port name
+		bool state; // value of port
+};
+
+class Display
+{
+	public:
+		void UpdateDisplay(uint16_t digit);
+	private:
+		uint16_t port_map; // port name
+		bool port_value; // digit displayed
+};
+
+class Buzzer
+{
+	public:
+		void SwitchBuzzer(bool state);
+	private:
+		uint16_t port_map;
 };
 
 
@@ -74,6 +102,13 @@ int main(void) {
   board_setup();
 	Door Door;
 	Motor Motor;
+	Button AcceptButton(ACCEPT_BUTTON);
+	Button CancelButton(CANCEL_BUTTON);
+	Button ProgramSelect1(PROG_SEL_1);
+	Button ProgramSelect2(PROG_SEL_2);
+	Button ProgramSelect3(PROG_SEL_3);
+	Buzzer Buzzer;
+	
 	while(1)
 	{
 		Door.ReadDoorPort();
@@ -163,11 +198,18 @@ int main(void) {
 
 }
 
+// Initialise the door with the corresponding port
+// Arguments: none
+// Returns: void
 Door::Door()
 {
-	port_map = PE11_DOOR_OPEN_CLOSE;
+	port_map = DOOR_OPEN_CLOSE;
 }
 
+// Read the value of the door's input port
+// to check if the door is open or closed
+// Arguments: none
+// Returns: void
 void Door::ReadDoorPort()
 {
 	port_value = (GPIOE->IDR) & port_map;
@@ -181,28 +223,83 @@ void Door::ReadDoorPort()
 	else 
 	{
 		// If closed show one
-		GPIOD->ODR |= (uint16_t) PD8_DISPLAY_A;
+		GPIOD->ODR |= (uint16_t) DISPLAY_A;
 		GPIOC->ODR &= ~(uint16_t) 0x0040;   // toggle PC6 buzzer
 		HAL_Delay(DELAY);
 	}
 }
 
+// Initialise the motor with the corresponding port
+// Arguments: none
+// Returns: void
 Motor::Motor()
 {
-	port_map = PD12_MOTOR_CONTROL;
+	port_map = MOTOR_CONTROL;
 	//GPIOD->ODR |= (uint16_t) 0x1000;   // PD12 motor control - on
 }
 
+// Set the motor to rotate in the chosen direction
+// and start rotating
+// Arguments: CLOCKWISE or ANTICLOCKWISE
+// Returns: void
 void Motor::Rotate(bool direction)
 {
 	if (direction == CLOCKWISE)
 	{
-		GPIOD->ODR &= ~(uint16_t) 0x8000;  // PD15 motor direction - set to clockwise
-		GPIOD->ODR |= (uint16_t) 0x1000;   // PD12 motor control - on 
+		GPIOD->ODR &= ~(uint16_t) 0x8000;  // Set motor direction to clockwise
+		GPIOD->ODR |= (uint16_t) 0x1000;   // Turn motor on
 	}
 	else
 	{
-		GPIOD->ODR |= (uint16_t) 0x8000;  // PD15 motor direction - set to anticlockwise
-		GPIOD->ODR |= (uint16_t) 0x1000;   // PD12 motor control - on 
+		GPIOD->ODR |= (uint16_t) 0x8000;  // Set motor direction to anticlockwise
+		GPIOD->ODR |= (uint16_t) 0x1000;   // Turn motor on
+	}
+}
+
+// Stop the motor
+// Arguments: none
+// Returns: void
+void Motor::Stop()
+{
+	GPIOD->ODR &= ~(uint16_t) 0x1000;  // Turn motor off
+}
+
+// Initialise the button with the chosen port
+// corresponding to the button type
+// Arguments: button type (i.e accept, cancel...)
+// Returns: void
+Button::Button(uint16_t port)
+{
+	port_map = port;
+}
+
+// Check whether the button is on or off
+// Arguments: none
+// Returns: button state (1 = on, 0 = off)
+bool Button::GetButtonState()
+{
+	return (GPIOE->IDR) & port_map;
+}
+
+// Display the chosen digit on the
+// 7 segment display
+// Arguments: digit to be displayed
+// Returns: void
+void Display::UpdateDisplay(uint16_t digit)
+{
+	GPIOD->ODR |= (uint16_t) digit; 
+}
+
+// NEEDS TO BE ALTERED
+// Sound the buzzer if on
+// Arguments: switch on or off
+// Returns: void
+void Buzzer::SwitchBuzzer(bool state)
+{
+	if (state)
+	{
+		GPIOC->ODR |= (uint16_t) 0x0040;   // turn buzzer on
+		HAL_Delay(DELAY);
+		GPIOC->ODR &= ~(uint16_t) 0x0040;   // turn buzzer off after short time
 	}
 }
