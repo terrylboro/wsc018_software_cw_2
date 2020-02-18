@@ -387,6 +387,11 @@
               <FileType>8</FileType>
               <FilePath>.\Src\WM.cpp</FilePath>
             </File>
+            <File>
+              <FileName>pin_map.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Src\pin_map.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
