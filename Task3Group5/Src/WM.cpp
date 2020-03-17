@@ -120,7 +120,8 @@ int main(void) {
 	while(1)
 	{
 			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
-			Timer1.Delay(300);	
+			Timer1.Delay(300);
+			Display1.DisplayNumber(0xFF);		
 		//////////////////////////////////////////////
 			if(prog_num != oldprog_num && cycle_num == 0){ //to test buttons
 				Display1.DisplayNumber(prog_num+1);
@@ -129,9 +130,7 @@ int main(void) {
 			//////////////////////////////////////////////
 		else if(cycle_num !=0 && get_num_cycle_stages(ProgramID)){
 			if (~Door1.ReadDoorPort()){
-				Display1.DisplayNumber(0xFF);
-				++cycle_num;
-				Timer().Delay(5);
+				Timer().Delay(50);
 				switch(ProgramID) {
 					case ProgColour:
 						Display1.DisplayNumber(colour_wash_cycle_code[cycle_num-1]);
@@ -180,6 +179,9 @@ int main(void) {
 					while(~Door1.ReadDoorPort())
 						Buzz.SoundBuzzer();
 					cycle_num = 0;
+				}
+				else {
+					++cycle_num;
 				}
 			}
 		}
@@ -394,6 +396,7 @@ void Timer::Delay(uint16_t time){
 // Arguments: all of the buttons to be checked on the washing machine board
 // Returns: void
 void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Display1, Button ProgramSelect1, Button ProgramSelect2, Button ProgramSelect3, Door Door1, Buzzer Buzz){
+	bool pause = false;
 	if (AcceptButton.GetButtonState())
 		{
 			if(cycle_num == 0){
@@ -408,16 +411,7 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 		else if (CancelButton.GetButtonState())
 		{
 			if(cycle_num != 0){
-				bool pause = true;
-				while(pause){
-					if(CancelButton.GetButtonState()){
-						cycle_num = 0;
-						pause = false;
-					}
-					else if(AcceptButton.GetButtonState()){
-						pause = false;
-					}
-				}
+				pause = true;
 			}
 		}
 		else if (ProgramSelect1.GetButtonState())
@@ -435,12 +429,20 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 		else
 		{
 			if (Door1.ReadDoorPort()){
-				//Display1.DisplayNumber(0);
+				pause = true;
 				Buzz.SoundBuzzer();
 			}
-			else{
-				//Display1.DisplayNumber(1);
-			}	
+		}
+		while(pause){
+			if(CancelButton.GetButtonState()){
+				cycle_num = 0;
+				pause = false;
+				prog_num = 0;
+				oldprog_num = 99;
+			}
+			else if(AcceptButton.GetButtonState() && !(Door1.ReadDoorPort())){
+				pause = false;
+			}
 		}
 }
 
