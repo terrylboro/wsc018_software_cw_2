@@ -10,14 +10,12 @@
 
  /* Configuration of the STM32 Discovery board
  */
-#include <iostream>
 extern "C" {  // this is needed to make C++ and C work together
   #include "gpio_setup.h"
 	#include "port_map.h"
 	#include "pin_map.h"
 	#include "wash_cycles.h"
 }
-
 
 // define a delay of 1000 milliseconds and constants for motor direction
 #define DELAY 1000
@@ -95,24 +93,6 @@ class Timer
 // Function prototype for CheckButtonPressed (description in funtion definition)
 void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Display1, Button ProgramSelect1, Button ProgramSelect2, Button ProgramSelect3, Door Door1, Buzzer Buzz);
 
-/**
- **************************************************************************************
- * Struct for program cycles
- **************************************************************************************
- **/
-
-/*class WM_Program
-{
-	WM_Program(int prog_num);
-	int *wash_cycle;
-	char *wash_duration;
-	string colour_wash_cycle[2] = {"fill", "heat", "wash_slow", "empty", "fill", "rinse_slow", "empty", "spin_high", "dry", "complete"};
-	int colour_wash_duration[];
-	char white_wash_cycle[];
-	int white_wash_duration[];
-	int prog_num_count;
-};*/
-
 
 /**
  **************************************************************************************
@@ -121,7 +101,7 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
  **/
 
 int main(void) {
-	
+	int num_prog_stages = get_num_cycle_stages(0);
   // STM32F3 Discovery Board initialization
   board_setup();
 	// Initialise each of the components of the washing machine as objects
@@ -134,54 +114,55 @@ int main(void) {
 	Button ProgramSelect2(PROG_SEL_2);
 	Button ProgramSelect3(PROG_SEL_3);
 	Buzzer Buzz;
-	
-	/* Create an array/lookup table to store stage times */
-	
-
+	Timer Timer1;
 	while(1)
 	{
-		// Allow the user to select program using the program selector buttons until they press accept
-		while (!AcceptButton.GetButtonState())
-		{
-			// Make function to log presses of PS buttons to make binary counter
-			// Enter a loop when one of them is pressed which doesn't break until accept/cancel is pressed
-			if (ProgramSelect1.GetButtonState())
-			{
-				if (AcceptButton.GetButtonState())
-				{
-					
-				}
-			}
-			else if (ProgramSelect2.GetButtonState())
-			{
-				
-			}
-			else if (ProgramSelect3.GetButtonState())
-			{
-				
-			}
-			
+		CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+		if(prog_num != oldprog_num){ //to test buttons
+			Display1.DisplayNumber(prog_num+1);
+			oldprog_num = prog_num;
 		}
 		
-		// Process chosen program
-		int num_prog_stages = get_num_cycle_stages(cycle_num);
-		wash_duration = get_wash_duration(int cycle_num);
-		wash_cycle = get_wash_cycle(int cycle_num);
-		
-		// Check if door is open, if so sound buzzer + don't allow to continue
-		while (Door1.ReadDoorPort())
-		{
-			Buzz.SoundBuzzer();
-		}
-		// Set timer to the correct length
-		Timer Timer1;
-		
-		
-		// Update program status and display on 7 segment display
-		
-		
-		// 
-			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+		Timer1.Delay();
+//		//int num_prog_stages = get_num_cycle_stages(0);
+//		Timer Timer1;
+//		// Initially set the timer to spin anticlockwise for 4 seconds
+//		// or stop if the door is opened
+//		Timer1.SetTimeCount(4);
+//		Display1.DisplayNumber(num_prog_stages);
+//		Timer1.Delay(100);
+//		while(Timer1.GetTimeCount() >= 0)
+//		{
+//			if (Door1.ReadDoorPort())
+//			{
+//				Motor1.Stop();
+//			}
+//			else
+//			{
+//				Motor1.Rotate(ANTICLOCKWISE);
+//			}
+//			// Each millisecond, check whether a button is being pressed
+//			// and calls function to perform the corresponding action
+//			Timer1.Delay(1);
+//			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+//		}
+//		
+//		// Then set the timer to spin clockwise for 2 seconds
+//		// or stop if the door is opened
+//		Timer1.SetTimeCount(2);
+//		while(Timer1.GetTimeCount() >= 0)
+//		{
+//			if (Door1.ReadDoorPort()){
+//						Motor1.Stop();
+//					}
+//					else {
+//						Motor1.Rotate(CLOCKWISE);
+//					}
+//			// Each millisecond, check whether a button is being pressed
+//			// and calls function to perform the corresponding action					
+//			Timer1.Delay(1);
+//			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+//		}
 		}
 }
 
@@ -341,21 +322,11 @@ void Timer::SetTimeCount(int time)
 
 // Delay for a time given in ms using appropriate millisecond delay function
 // Arguments: time in ms
-// Returns: void
+// Returns: none
 void Timer::Delay(uint16_t time){
 	DELAYER(time);
 	time_count-=time;
 }
-
-// Initialise the program according to the user input
-// Arguments: program number
-// Returns: void
-/*WM_Program::WM_Program(int prog_num)
-{
-	switch(prog_num)
-		case(0) :
-			char Cycle[][2] = {{'fill', 5}, {'heat', 2}, {'wash_slow', 3}, {'empty', 4}, {'fill', 4}, {'rinse_slow', 4}, {"empty", 3}, {"spin_high", 6}, {"dry", 5}, {"complete", 0}};
-}*/
 
 // Check if any of the buttons have been pressed
 // Each button being pressed corresponds to a number on the display
@@ -365,32 +336,56 @@ void Timer::Delay(uint16_t time){
 void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Display1, Button ProgramSelect1, Button ProgramSelect2, Button ProgramSelect3, Door Door1, Buzzer Buzz){
 	if (AcceptButton.GetButtonState())
 		{
-			Display1.DisplayNumber(2);
+			startWash(prog_num);
 		}
 		else if (CancelButton.GetButtonState())
 		{
-			Display1.DisplayNumber(3);
+			
 		}
 		else if (ProgramSelect1.GetButtonState())
 		{
-			Display1.DisplayNumber(6);
+			setProg(BUTONE);
 		}
 		else if (ProgramSelect2.GetButtonState())
 		{
-			Display1.DisplayNumber(5);
+			setProg(BUTTWO);
 		}
 		else if (ProgramSelect3.GetButtonState())
 		{
-			Display1.DisplayNumber(4);
+			setProg(BUTTHREE);
 		}
 		else
 		{
 			if (Door1.ReadDoorPort()){
-				Display1.DisplayNumber(0);
+				//Display1.DisplayNumber(0);
 				Buzz.SoundBuzzer();
 			}
 			else{
-				Display1.DisplayNumber(1);
+				//Display1.DisplayNumber(1);
 			}	
 		}
+}
+
+void setProg(int button){
+	switch(button){
+		case BUTONE:
+			prog_num ^= 1;
+			break;
+		case BUTTWO:
+			prog_num ^= 2;
+			break;
+		case BUTTHREE:
+			prog_num ^= 4;
+			break;
+		default:
+			break;
+	}
+	if(prog_num >= 6)
+		prog_num = -1;
+}
+
+void startWash(int prog_num){
+	switch(prog_num){
+		case 
+	}
 }

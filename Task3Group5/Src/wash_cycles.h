@@ -1,9 +1,20 @@
-#include <iostream>
+#include <cstring>
 
-std::string colour_wash_cycle[] = {"fill", "heat", "wash_slow", "empty", "fill", "rinse_slow", "empty", "spin_high", "dry", "complete"};
+enum  Buttons{
+	BUTONE,
+	BUTTWO,
+	BUTTHREE
+};
+
+int prog_num = 0;
+int oldprog_num = 0;
+
+void setProg(int button);
+
+char colour_wash_cycle[10][20] = {"fill", "heat", "wash_slow", "empty", "fill", "rinse_slow", "empty", "spin_high", "dry", "complete"};
 int colour_wash_duration[] = {5, 2, 3, 4, 4, 4, 3, 6, 5, 0};
 
-std::string white_wash_cycle[] = {"fill", "heat", "wash_slow", "empty", "fill", "rinse_slow", "empty", "spin_high", "spin_slow", "dry", "complete"};
+char white_wash_cycle[11][20] = {"fill", "heat", "wash_slow", "empty", "fill", "rinse_slow", "empty", "spin_high", "spin_slow", "dry", "complete"};
 int white_wash_duration[] = {5, 6, 4, 4, 4, 5, 3, 8, 4, 5, 0};
 
 int get_num_cycle_stages(int cycle_num)
@@ -12,33 +23,41 @@ int get_num_cycle_stages(int cycle_num)
 	switch(cycle_num)
 	{
 		case 0:
-			array_length = sizeof(colour_wash_duration)/sizeof(*colour_wash_duration);
+			array_length = (sizeof(colour_wash_duration)) / (sizeof(colour_wash_duration[0]));
+            break;
 		case 1:
-			array_length = sizeof(white_wash_duration)/sizeof(*white_wash_duration);
+			array_length = sizeof(white_wash_duration)/sizeof(white_wash_duration[0]);
+			break;
 		default:
 			array_length = 0;
-		return array_length;
 	}
+	return array_length;
 }
 
 int *get_wash_duration(int cycle_num)
 {
+	int *wash_duration;
 	switch(cycle_num)
 	{
 		case 0:
-			return colour_wash_duration;
+			wash_duration = colour_wash_duration;
 		case 1:
-			return white_wash_duration;
+			wash_duration = white_wash_duration;
 	}
+	return wash_duration;
 }
 
-std::string *get_wash_cycle(int cycle_num)
+char *get_wash_cycle(int cycle_num)
 {
+	char *wash_cycle;
 	switch(cycle_num)
 	{
 		case 0:
-			return colour_wash_cycle;
+			//wash_cycle = colour_wash_cycle;
+			std::strcpy(wash_cycle, *colour_wash_cycle);
 		case 1:
-			return white_wash_cycle;
+			//wash_cycle = white_wash_cycle;
+			std::strcpy(wash_cycle, *white_wash_cycle);
 	}
+	return wash_cycle;
 }
