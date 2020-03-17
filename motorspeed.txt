@@ -1,0 +1,11 @@
+// Generate PWM signal with 40% duty cycle
+int i;
+for (i = 0; i < 100; i++)
+{
+	if (i < 40) Motor1.Rotate(CLOCKWISE);
+	else Motor1.Stop();
+	// Each millisecond, check whether a button is being pressed
+	// and calls function to perform the corresponding action					
+	Timer1.Delay(1);
+	CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+}
