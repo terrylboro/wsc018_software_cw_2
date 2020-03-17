@@ -115,15 +115,75 @@ int main(void) {
 	Button ProgramSelect3(PROG_SEL_3);
 	Buzzer Buzz;
 	Timer Timer1;
+	Motor1.Stop();
+	Buzz.SoundBuzzer();
 	while(1)
 	{
-		CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
-		if(prog_num != oldprog_num){ //to test buttons
-			Display1.DisplayNumber(prog_num+1);
-			oldprog_num = prog_num;
+			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+			Timer1.Delay(300);	
+		//////////////////////////////////////////////
+			if(prog_num != oldprog_num && cycle_num == 0){ //to test buttons
+				Display1.DisplayNumber(prog_num+1);
+				oldprog_num = prog_num;
+			}
+			//////////////////////////////////////////////
+		else if(cycle_num !=0 && get_num_cycle_stages(ProgramID)){
+			if (~Door1.ReadDoorPort()){
+				Display1.DisplayNumber(0xFF);
+				++cycle_num;
+				Timer().Delay(5);
+				switch(ProgramID) {
+					case ProgColour:
+						Display1.DisplayNumber(colour_wash_cycle_code[cycle_num-1]);
+						Timer1.SetTimeCount(colour_wash_duration[cycle_num-1]);
+						while(Timer1.GetTimeCount() >= 0 && !CancelButton.GetButtonState()){
+							switch(white_wash_motor[cycle_num-1]){
+									case OFF:
+											Motor1.Stop();
+										break;
+									case SLOW:
+											Motor1.Rotate(CLOCKWISE);
+										break;
+									case FAST:
+											Motor1.Rotate(ANTICLOCKWISE);
+										break;
+									default:
+										break;
+								}
+								Timer1.Delay(1);
+							}
+							break;
+					case ProgWhite:
+						Display1.DisplayNumber(white_wash_cycle_code[cycle_num-1]);
+						Timer1.SetTimeCount(white_wash_duration[cycle_num-1]);
+						while(Timer1.GetTimeCount() >= 0 && !CancelButton.GetButtonState()){
+							switch(white_wash_motor[cycle_num-1]){
+								case OFF:
+										Motor1.Stop();
+									break;
+								case SLOW:
+										Motor1.Rotate(CLOCKWISE);
+									break;
+								case FAST:
+										Motor1.Rotate(ANTICLOCKWISE);
+									break;
+								default:
+									break;
+							}
+							Timer1.Delay(1);
+						}
+						break;
+					default:
+						break;
+					}
+				if(cycle_num >= get_num_cycle_stages(ProgramID)){
+					while(~Door1.ReadDoorPort())
+						Buzz.SoundBuzzer();
+					cycle_num = 0;
+				}
+			}
 		}
-		
-		Timer1.Delay();
+	}
 //		//int num_prog_stages = get_num_cycle_stages(0);
 //		Timer Timer1;
 //		// Initially set the timer to spin anticlockwise for 4 seconds
@@ -164,7 +224,7 @@ int main(void) {
 //			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
 //		}
 		}
-}
+
 
 /**
  **************************************************************************************
@@ -336,11 +396,29 @@ void Timer::Delay(uint16_t time){
 void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Display1, Button ProgramSelect1, Button ProgramSelect2, Button ProgramSelect3, Door Door1, Buzzer Buzz){
 	if (AcceptButton.GetButtonState())
 		{
-			startWash(prog_num);
+			if(cycle_num == 0){
+				startWash(prog_num);
+				Display1.DisplayNumber(cycle_num);
+			}
+			else {
+				++cycle_num;
+			}
+			
 		}
 		else if (CancelButton.GetButtonState())
 		{
-			
+			if(cycle_num != 0){
+				bool pause = true;
+				while(pause){
+					if(CancelButton.GetButtonState()){
+						cycle_num = 0;
+						pause = false;
+					}
+					else if(AcceptButton.GetButtonState()){
+						pause = false;
+					}
+				}
+			}
 		}
 		else if (ProgramSelect1.GetButtonState())
 		{
@@ -380,12 +458,17 @@ void setProg(int button){
 		default:
 			break;
 	}
-	if(prog_num >= 6)
-		prog_num = -1;
 }
 
 void startWash(int prog_num){
-	switch(prog_num){
-		case 
+	cycle_num = 1;
+	
+	switch(prog_num+1){
+		case 1:
+			ProgramID = ProgWhite;
+			break;
+		case 2:
+			ProgramID = ProgColour;
+			break;
 	}
 }
