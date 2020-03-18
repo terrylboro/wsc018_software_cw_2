@@ -75,6 +75,7 @@ class Buzzer
 {
 	public:
 		void SoundBuzzer();
+		void DisableBuzzer();
 	private:
 		uint16_t port_map; // port location
 };
@@ -114,71 +115,54 @@ int main(void) {
 	Button ProgramSelect3(PROG_SEL_3);
 	Buzzer Buzz;
 	Timer Timer1;
+	
+	// Initialise motor and buzzer to off
 	Motor1.Stop();
-	Buzz.SoundBuzzer();
-	int motorPWM = 0;
+	Buzz.DisableBuzzer();
+	int motorPWM = 0; // Counter to control PWM signal applied to motor
+	
 	while(1)
 	{
-			CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
-			Timer1.Delay(300);
-			Display1.DisplayNumber(0xFF);		
-		//////////////////////////////////////////////
-			if(prog_num != oldprog_num && cycle_num == 0){ //to test buttons
-				Display1.DisplayNumber(prog_num+1);
-				oldprog_num = prog_num;
-			}
-			//////////////////////////////////////////////
-		else if(cycle_num !=0 && cycle_num < pCurrentProg->wash_length){
+		// User selects the program using the buttons on the board
+		CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
+		Timer1.Delay(100); // Delay ensures that button is not checked too quickly
+		//Display1.DisplayNumber(0xFF);	// Make display to blank each cycle to avoid glitching
+
+		/* Display the program the user has chosen */
+		if(prog_num != oldprog_num && cycle_num == 0){ //to test buttons
+			Display1.DisplayNumber(prog_num+1);
+			oldprog_num = prog_num;
+		}
+		
+		// Check the program has been chosen, if so the cycle number is no longer equal to 0
+		// Execute washing machine logic until the current program is complete
+		else if(cycle_num !=0 && cycle_num <= pCurrentProg->wash_length){
+			// Ensure that the door is closed, if not don't start the program
 			if (~Door1.ReadDoorPort()){
-				Timer().Delay(50);
-				switch(ProgramID) {
-					case ProgColour:
-						Display1.DisplayNumber(colour_wash.get_current_wash_cycle().status_code);
-						Timer1.SetTimeCount(colour_wash.get_current_wash_cycle().duration);
-						motorPWM = 0;
-						while(Timer1.GetTimeCount() >= 0 && !CancelButton.GetButtonState()){
-							switch(colour_wash.get_current_wash_cycle().motor_control){
-									case OFF:
-											Motor1.Stop();
-										break;
-									case SLOW:
-											if (++motorPWM < 40) Motor1.Rotate(CLOCKWISE);
-											else Motor1.Stop();
-										break;
-									case FAST:
-											Motor1.Rotate(ANTICLOCKWISE);
-										break;
-									default:
-										break;
-								}
-								Timer1.Delay(1);
-							}
+				//Timer().Delay(50); // not sure why here
+				Display1.DisplayNumber(pCurrentProg->get_current_wash_cycle().status_code);
+				Timer1.SetTimeCount(pCurrentProg->get_current_wash_cycle().duration);
+				
+				while(Timer1.GetTimeCount() >= 0 && !CancelButton.GetButtonState()){
+					switch(pCurrentProg->get_current_wash_cycle().motor_control){
+						case OFF:
+								Motor1.Stop();
 							break;
-					case ProgWhite:
-						Display1.DisplayNumber(white_wash.get_current_wash_cycle().status_code);
-						Timer1.SetTimeCount(white_wash.get_current_wash_cycle().duration);
-						motorPWM = 0;
-						while(Timer1.GetTimeCount() >= 0 && !CancelButton.GetButtonState()){
-							switch(white_wash.get_current_wash_cycle().motor_control){
-								case OFF:
-										Motor1.Stop();
-									break;
-								case SLOW:
-										if (++motorPWM < 40) Motor1.Rotate(CLOCKWISE);
-										else Motor1.Stop();
-									break;
-								case FAST:
-										Motor1.Rotate(ANTICLOCKWISE);
-									break;
-								default:
-									break;
-							}
-							Timer1.Delay(1);
-						}
-						break;
-					default:
-						break;
+						case SLOW:
+								for(motorPWM = 0; motorPWM<100; ++motorPWM){
+									if (motorPWM < 10) Motor1.Rotate(CLOCKWISE);
+									else Motor1.Stop();
+									Timer1.Delay(1);
+								}
+							break;
+						case FAST:
+								Motor1.Rotate(ANTICLOCKWISE);
+							break;
+						default:
+							break;
 					}
+					Timer1.Delay(1);
+				}
 				if(cycle_num >= pCurrentProg->wash_length){
 					while(~Door1.ReadDoorPort())
 						Buzz.SoundBuzzer();
@@ -329,7 +313,11 @@ void Buzzer::SoundBuzzer()
 		BUZZER_PORT ^= (uint16_t) 0x0040;   // toggle buzzer off after short time
 		Timer().Delay(DELAY/2);
 }
-
+void Buzzer::DisableBuzzer()
+{
+	BUZZER_PORT &= (uint16_t) ~(0x0040);
+	Timer().Delay(DELAY/2);
+}
 // Return the time elapsed since the timer was initialised
 // Arguments: none
 // Returns: time passed since timer started
@@ -364,14 +352,19 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 	bool pause = false;
 	if (AcceptButton.GetButtonState())
 		{
+			// If the cycle_num is 0 then no program has been started,
+			// so the accept button is used to start a program
 			if(cycle_num == 0){
+				cycle_num = 1;
 				startWash(prog_num);
 				Display1.DisplayNumber(cycle_num);
 			}
+			// Otherwise increment the cycle number counter by 1
+			// while the accept button is held
 			else {
 				while(AcceptButton.GetButtonState()){
 					++cycle_num;
-					Display1.DisplayNumber(cycle_num);
+					Display1.DisplayNumber(cycle_num); // display new cycle number
 					if(cycle_num > pCurrentProg->wash_length){
 						cycle_num = 0;
 						break;
@@ -382,10 +375,12 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 		}
 		else if (CancelButton.GetButtonState())
 		{
+			// Pause the program if the program has been started
 			if(cycle_num != 0){
 				pause = true;
 			}
 		}
+		// Set the PS buttons to toggle as a binary counter
 		else if (ProgramSelect1.GetButtonState())
 		{
 			setProg(BUTONE);
@@ -398,11 +393,15 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 		{
 			setProg(BUTTHREE);
 		}
+		// Pause the program and sound the buzzer if the door is opened
 		if (Door1.ReadDoorPort()){
 				pause = true;
 				Buzz.SoundBuzzer();
-			}
-		while(pause){
+		}
+		// While the program is paused, don't execute the main program
+		// If the cancel button is pressed, reset
+		// If the accept button is pressed and the door is closed, continue
+		while(pause && cycle_num!=0){
 			if(CancelButton.GetButtonState()){
 				cycle_num = 0;
 				pause = false;
@@ -415,6 +414,9 @@ void CheckButtonPressed(Button AcceptButton, Button CancelButton, Display Displa
 		}
 }
 
+// Toggle the PS buttons to function as a binary counter
+// for selecting the program number
+// MSB: PS3, 2nd MSB: PS2, LSB: PS1
 void setProg(int button){
 	switch(button){
 		case BUTONE:
@@ -427,21 +429,6 @@ void setProg(int button){
 			prog_num ^= 4;
 			break;
 		default:
-			break;
-	}
-}
-
-void startWash(int prog_num){
-	cycle_num = 1;
-	
-	switch(prog_num+1){
-		case 1:
-			pCurrentProg = &white_wash;
-			ProgramID = ProgWhite;
-			break;
-		case 2:
-			pCurrentProg = &colour_wash;
-			ProgramID = ProgColour;
 			break;
 	}
 }

@@ -75,6 +75,7 @@ class Buzzer
 {
 	public:
 		void SoundBuzzer();
+		void DisableBuzzer();
 	private:
 		uint16_t port_map; // port location
 };
@@ -115,7 +116,7 @@ int main(void) {
 	Buzzer Buzz;
 	Timer Timer1;
 	Motor1.Stop();
-	Buzz.SoundBuzzer();
+	Buzz.DisableBuzzer();
 	int motorPWM = 0;
 	while(1)
 	{
@@ -128,7 +129,7 @@ int main(void) {
 				oldprog_num = prog_num;
 			}
 			//////////////////////////////////////////////
-		else if(cycle_num !=0 && pCurrentProg->wash_length){
+		else if(cycle_num !=0 && cycle_num < pCurrentProg->wash_length){
 			if (~Door1.ReadDoorPort()){
 				Timer().Delay(50);
 				switch(ProgramID) {
@@ -329,7 +330,10 @@ void Buzzer::SoundBuzzer()
 		BUZZER_PORT ^= (uint16_t) 0x0040;   // toggle buzzer off after short time
 		Timer().Delay(DELAY/2);
 }
-
+void Buzzer::DisableBuzzer()
+{
+	BUZZER_PORT &= (uint16_t) ~(0x0040);
+}
 // Return the time elapsed since the timer was initialised
 // Arguments: none
 // Returns: time passed since timer started

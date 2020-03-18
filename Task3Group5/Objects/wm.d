@@ -33,3 +33,4 @@
 .\objects\wm.o: Src\wash_cycles.h
 .\objects\wm.o: C:\KEIL_V5\ARM\ARMCC\Bin\..\include\cstring
 .\objects\wm.o: C:\KEIL_V5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\wm.o: C:\KEIL_V5\ARM\ARMCC\Bin\..\include\string.h
