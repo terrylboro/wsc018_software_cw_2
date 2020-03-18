@@ -125,7 +125,7 @@ int main(void) {
 	{
 		// User selects the program using the buttons on the board
 		CheckButtonPressed(AcceptButton,CancelButton, Display1, ProgramSelect1, ProgramSelect2, ProgramSelect3, Door1, Buzz);
-		Timer1.Delay(100); // Delay ensures that button is not checked too quickly
+		Timer1.Delay(200); // Delay ensures that button is not checked too quickly but not so much the buttons feel sticky
 		//Display1.DisplayNumber(0xFF);	// Make display to blank each cycle to avoid glitching
 
 		/* Display the program the user has chosen */
@@ -149,6 +149,8 @@ int main(void) {
 								Motor1.Stop();
 							break;
 						case SLOW:
+								// Using a 10% duty cycle slow the motor and
+								// increment delay 1 to account for time
 								for(motorPWM = 0; motorPWM<100; ++motorPWM){
 									if (motorPWM < 10) Motor1.Rotate(CLOCKWISE);
 									else Motor1.Stop();
@@ -163,12 +165,20 @@ int main(void) {
 					}
 					Timer1.Delay(1);
 				}
+				// If the program is finished wait until the door is open using a while loop
+				// If the door is closed, buzz thrice, wait and repeat
+				// Before restarting the program, reset cycle_num and old prog_num
 				if(cycle_num >= pCurrentProg->wash_length){
-					while(~Door1.ReadDoorPort())
-						Buzz.SoundBuzzer();
 					cycle_num = 0;
+					oldprog_num = 99;
+					while(~Door1.ReadDoorPort()){
+						for(int i = 0; i<3;i++){
+							Buzz.SoundBuzzer();
+						}
+						Timer().Delay(800);
+					}
 				}
-				else {
+				else { //incrememnt cycle_num
 					++cycle_num;
 				}
 			}
