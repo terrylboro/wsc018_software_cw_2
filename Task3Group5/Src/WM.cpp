@@ -86,7 +86,6 @@ class Timer
 		int GetTimeCount(void);
 		void SetTimeCount(int time = 1); // set default timer to 1 second
 		void Delay(uint16_t time = DELAY); // set default delay time to that defined at the top of the program
-		void SetInterupt(bool);
 	private:
 		int time_count; // stores the current count on the timer
 };
